@@ -4,6 +4,7 @@ from tqdm import tqdm
 import cv2
 import os
 import matplotlib.pyplot as plt
+import numpy as np
 
 def calc_intensities(folder = "Temp", noisify = 3, every = 2, remove_clips_with_text = True ,every_text = 20, confidence = 20):
     """
@@ -56,8 +57,58 @@ def plot_inten(intensities):
     plt.plot([i[-1] for i in intensities])
     plt.xlabel("Clip number")
     plt.ylabel("intensity")
-    plt.title("Intensities in Clips in order")
+    plt.title("Intensities of Clips in order")
     plt.show()
+
 
 def screen_blend(A, B):
     return 1 - (1 - A) * (1 - B)
+
+import cv2
+import numpy as np
+
+def pad_to_shape(array, target_shape):
+    pad_height = target_shape[0] - array.shape[0]
+    pad_width = target_shape[1] - array.shape[1]
+    
+    # Calculate padding for height and width, evenly distributed
+    pad_top = pad_height // 2
+    pad_bottom = pad_height - pad_top
+    pad_left = pad_width // 2
+    pad_right = pad_width - pad_left
+    
+    # Apply padding
+    padded_array = np.pad(array, ((pad_top, pad_bottom), (pad_left, pad_right), (0, 0)), mode='constant')
+    return padded_array
+
+def set_to_res(input_video_path, output_video_path=None, target_shapes = [(1080, 1920, 3), (1280, 720, 3), (3840, 2160, 3)], inplace = True):
+
+    if output_video_path is None: output_video_path = input_video_path.split(".mp4")[0] + "_reshaped" + ".mp4"
+    cap = cv2.VideoCapture(input_video_path)
+
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+    if (frame_height, frame_width, 3) not in target_shapes:
+        res = (frame_height, frame_width, 3)
+        diff = [abs((np.array(res) - np.array(i)).sum()) for i in target_shapes]
+        target_shape = target_shapes[diff.index(min(diff))]
+        out = cv2.VideoWriter(output_video_path, fourcc, fps, (target_shape[1], target_shape[0]))
+        while True:
+            ret, frame = cap.read()
+            if not ret: break
+            padded_frame = pad_to_shape(frame, target_shape)
+            out.write(padded_frame)
+        print("Video processing complete. The output video is saved as", output_video_path)
+        if inplace: os.remove(input_video_path)
+        cap.release()
+        out.release()
+    else:
+        print(f"{input_video_path} is already meeting requiremnt")
+        pass
+
+
+    
+

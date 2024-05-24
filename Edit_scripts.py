@@ -79,4 +79,4 @@ def merge_audio_with_video(BaseVideoPath, AudioFilePath, OutputFolder, Output_na
     audio_clip = AudioFileClip(AudioFilePath)
     video_clip = video_clip.set_audio(audio_clip)
     video_clip.write_videofile(OutputFolder+'/'+Output_name+".mp4", codec='libx264', audio_codec='aac')
-    print(f"Thhe videos and audios have been merged and saved to {OutputFolder+'/'+Output_name}.mp4")
+    print(f"The videos and audios have been merged and saved to {OutputFolder+'/'+Output_name}.mp4")
