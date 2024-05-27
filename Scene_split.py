@@ -33,18 +33,37 @@ def get_scene_dict(folder):
         scene_dict[video] = scene_list
     return scene_dict
 
-def get_scene_df(scene_dict, folder = "Videos"):
+def get_scene_df(scene_dict, folder="Videos", clip: float = None, min_duration=2, max_duration=np.inf):
     video_title_map, video_title_map_rev = mapper(folder)
     rows = []
-    for title in list(scene_dict.keys()):
+    
+    for title in scene_dict.keys():
         scene_list = scene_dict[title]
+        
         for scene in scene_list:
-            row = [video_title_map_rev[title], 
-            timecode_to_seconds(scene[0].get_timecode()),
-            timecode_to_seconds(scene[1].get_timecode())]
-            rows.append(row)
+            start_time = timecode_to_seconds(scene[0].get_timecode())
+            end_time = timecode_to_seconds(scene[1].get_timecode())
+            
+            if clip is not None:
+                if end_time > clip:
+                    duration = start_time + clip - start_time
+                    if duration > min_duration and duration < max_duration:
+                        row = [video_title_map_rev[title], start_time, start_time + clip]
+                        rows.append(row)
+                else:
+                    duration = end_time - start_time
+                    if duration > min_duration and duration < max_duration:
+                        row = [video_title_map_rev[title], start_time, end_time]
+                        rows.append(row)
+            else:
+                duration = end_time - start_time
+                if duration > min_duration and duration < max_duration:
+                    row = [video_title_map_rev[title], start_time, end_time]
+                    rows.append(row)
+
     scene_df = pd.DataFrame(rows).rename(columns={0: "Video title", 1: "Scene start", 2: "Scene end"})
     for i in list(video_title_map.keys()): print(i, ' : ', video_title_map[i])
+    scene_df["Duration"] = scene_df["Scene end"] - scene_df["Scene start"]
     return scene_df
 
 def plot_df(df, folder = "Videos"):

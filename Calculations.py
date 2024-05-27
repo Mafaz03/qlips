@@ -4,7 +4,8 @@ from tqdm import tqdm
 import cv2
 import os
 import matplotlib.pyplot as plt
-import numpy as np
+import numpy as nd
+import pandas as pd
 
 def calc_intensities(folder = "Temp", noisify = 3, every = 2, remove_clips_with_text = True ,every_text = 20, confidence = 20):
     """
@@ -106,9 +107,32 @@ def set_to_res(input_video_path, output_video_path=None, target_shapes = [(1080,
         cap.release()
         out.release()
     else:
+        target_shape = (frame_height, frame_width, 3)
         print(f"{input_video_path} is already meeting requiremnt")
         pass
+    return [target_shape]
 
 
-    
+def filter_overlapping_scenes(scene_df):
+    new = []
+    prev_end = 0 
+    prev_start = 0 
+
+    for i in range(scene_df.shape[0]):
+        start = scene_df.iloc[i]["Scene start"]
+        end = scene_df.iloc[i]["Scene end"]
+        video_title = int(scene_df.iloc[i]["Video title"])
+
+        if i == 0:
+            prev_end = end
+            prev_start = start
+            new.append([video_title, start, end, end - start])
+        else:
+            if start >= prev_end or start <= prev_start:
+                new.append([video_title, start, end, end - start])
+                prev_end = end
+                prev_start = start
+
+    filtered_scene_df = pd.DataFrame(new, columns=["Video title", "Scene start", "Scene end", "Duration"])
+    return filtered_scene_df
 

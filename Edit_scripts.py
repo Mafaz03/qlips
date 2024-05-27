@@ -3,9 +3,39 @@ from tqdm import tqdm
 import cv2
 import numpy as np
 from moviepy.editor import VideoFileClip, AudioFileClip
+from moviepy.editor import VideoFileClip, concatenate_videoclips
 from Calculations import *
 
-def create_video_only_edit(intensities, Output_folder, edit_name = "demo", total_duration = 180, temp_dir = "Temp"):
+# def create_video_only_edit(intensities, Output_folder, edit_name = "demo", total_duration = 180, temp_dir = "Temp"):
+#     os.makedirs(Output_folder, exist_ok=True)
+#     temp_video_paths = []
+#     accumulated_duration = 0
+
+#     for i in intensities:
+#         clip_path = f"{temp_dir}/cut{i[0]}.mp4"
+#         if os.path.exists(clip_path):
+#             clip = VideoFileClip(clip_path)
+#             remaining_duration = total_duration - accumulated_duration
+#             if accumulated_duration + clip.duration > total_duration:
+#                 clip = clip.subclip(0, remaining_duration)
+#             accumulated_duration += clip.duration
+#             temp_filename = f"{temp_dir}/temp_clip_{i[0]}.mp4"
+#             clip.write_videofile(temp_filename, codec="libx264", audio_codec="aac", fps=clip.fps)
+#             temp_video_paths.append(temp_filename)
+#             if accumulated_duration >= total_duration:
+#                 break
+
+#     with open("temp_videos.txt", "w") as f:
+#         for temp_video_path in temp_video_paths:
+#             f.write(f"file '{temp_video_path}'\n")
+
+#     os.system(f"ffmpeg -f concat -safe 0 -i temp_videos.txt -c copy {Output_folder+'/'+edit_name}.mp4")
+
+#     os.remove("temp_videos.txt")
+#     for temp_video_path in temp_video_paths:
+#         os.remove(temp_video_path)
+
+def create_video_only_edit(intensities, Output_folder, edit_name="demo", total_duration=180, temp_dir="Temp"):
     os.makedirs(Output_folder, exist_ok=True)
     temp_video_paths = []
     accumulated_duration = 0
@@ -14,25 +44,24 @@ def create_video_only_edit(intensities, Output_folder, edit_name = "demo", total
         clip_path = f"{temp_dir}/cut{i[0]}.mp4"
         if os.path.exists(clip_path):
             clip = VideoFileClip(clip_path)
+            fps = clip.fps  # Save the original fps to maintain consistency
             remaining_duration = total_duration - accumulated_duration
             if accumulated_duration + clip.duration > total_duration:
                 clip = clip.subclip(0, remaining_duration)
             accumulated_duration += clip.duration
             temp_filename = f"{temp_dir}/temp_clip_{i[0]}.mp4"
-            clip.write_videofile(temp_filename, codec="libx264", audio_codec="aac", fps=clip.fps)
+            clip.write_videofile(temp_filename, codec="libx264", audio_codec="aac", fps=fps)
             temp_video_paths.append(temp_filename)
             if accumulated_duration >= total_duration:
                 break
 
-    with open("temp_videos.txt", "w") as f:
-        for temp_video_path in temp_video_paths:
-            f.write(f"file '{temp_video_path}'\n")
-
-    os.system(f"ffmpeg -f concat -safe 0 -i temp_videos.txt -c copy {Output_folder+'/'+edit_name}.mp4")
-
-    os.remove("temp_videos.txt")
-    for temp_video_path in temp_video_paths:
-        os.remove(temp_video_path)
+    # Concatenate all the temporary video clips
+    final_clips = [VideoFileClip(path) for path in temp_video_paths]
+    final_video = concatenate_videoclips(final_clips)
+    
+    # Output the final edited video
+    output_path = os.path.join(Output_folder, f"{edit_name}.mp4")
+    final_video.write_videofile(output_path, codec="libx264", audio_codec="aac", fps=fps)
 
 
 
@@ -73,10 +102,15 @@ def overlay_videos(BaseVideoPath, OverlayVideoPath, outputfolder = "Temp_edits",
     print("The videos have been overlaid and saved to", output_path)
 
 
-def merge_audio_with_video(BaseVideoPath, AudioFilePath, OutputFolder, Output_name):
+def merge_audio_with_video(BaseVideoPath, AudioFilePath, OutputFolder, Output_name, duration = np.inf):
     os.makedirs(OutputFolder, exist_ok=True)
     video_clip = VideoFileClip(BaseVideoPath)
     audio_clip = AudioFileClip(AudioFilePath)
+
+    min_duration = min(video_clip.duration, audio_clip.duration, duration)
+    video_clip = video_clip.subclip(0, min_duration)
+    audio_clip = audio_clip.subclip(0, min_duration)
+
     video_clip = video_clip.set_audio(audio_clip)
     video_clip.write_videofile(OutputFolder+'/'+Output_name+".mp4", codec='libx264', audio_codec='aac')
     print(f"The videos and audios have been merged and saved to {OutputFolder+'/'+Output_name}.mp4")
