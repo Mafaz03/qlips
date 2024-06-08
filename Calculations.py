@@ -136,3 +136,9 @@ def filter_overlapping_scenes(scene_df):
     filtered_scene_df = pd.DataFrame(new, columns=["Video title", "Scene start", "Scene end", "Duration"])
     return filtered_scene_df
 
+def convert_timestamp_to_seconds(timestamp):
+    minutes, seconds = timestamp.split(':')
+    minutes = float(minutes)
+    seconds = float(seconds)
+    total_seconds = (minutes * 60) + seconds
+    return total_seconds
